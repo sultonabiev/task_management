@@ -7,6 +7,7 @@ from sqlalchemy import Column, Integer, String, create_engine, Boolean
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from passlib.context import CryptContext
 from typing import List
+from fastapi import Form
 
 tags_metadata = [
     {"name": "Пользователи"},
@@ -101,8 +102,8 @@ async def task_list(db: Session = Depends(get_db)):
     return tasks
 
 @app.post("/create_task", tags=["Задачи"])
-async def create_task(task: Task, current_user: DBUser = Depends(get_current_user), all_users: List[DBUser] = Depends(get_all_users), db: Session = Depends(get_db)):
-    db_task = DBTask(name=task.name, assigned_to=task.assigned_to, status=task.status, details=task.details)
+async def create_task(name: str = Form(...), assigned_to: str = Form(...), status: bool = Form(False), details: str = Form(...), current_user: DBUser = Depends(get_current_user), all_users: List[DBUser] = Depends(get_all_users), db: Session = Depends(get_db)):
+    db_task = DBTask(name=name, assigned_to=assigned_to, status=status, details=details)
     db.add(db_task)
     db.commit()
     return {"detail": "Task created successfully"}
@@ -129,23 +130,24 @@ async def delete_task(task_id: int, current_user: DBUser = Depends(get_current_u
         raise HTTPException(status_code=404, detail="Task not found")
 
 @app.post("/modify_task/{task_id}", tags=["Задачи"])
-async def modify_task(task_id: int, new_task: Task, current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
+async def modify_task(task_id: int, name: str = Form(...), assigned_to: str = Form(...), status: bool = Form(False), details: str = Form(...), current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
     task = db.query(DBTask).filter(DBTask.id == task_id).first()
     if task:
-        task.name = new_task.name
-        task.assigned_to = new_task.assigned_to
-        task.status = new_task.status
+        task.name = name
+        task.assigned_to = assigned_to
+        task.status = status
+        task.details = details
         db.commit()
         return {"detail": "Task modified successfully"}
     else:
         raise HTTPException(status_code=404, detail="Task not found")
 
 @app.post("/create_user", tags=["Пользователи"])
-async def create_user(new_user: User, current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
-    existing_user = db.query(DBUser).filter(DBUser.username == new_user.username).first()
+async def create_user(username: str = Form(...), password: str = Form(...), supervisor: bool = Form(False), current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    existing_user = db.query(DBUser).filter(DBUser.username == username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already exists")
-    user = DBUser(username=new_user.username, hashed_password=pwd_context.hash(new_user.password), supervisor=new_user.supervisor)
+    user = DBUser(username=username, hashed_password=pwd_context.hash(password), supervisor=supervisor)
     db.add(user)
     db.commit()
     return {"detail": "User created successfully"}
@@ -161,17 +163,16 @@ async def delete_user(username: str, current_user: DBUser = Depends(get_current_
         raise HTTPException(status_code=404, detail="User not found")
 
 @app.post("/modify_user/{username}", tags=["Пользователи"])
-async def modify_user(username: str, new_user: User, current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
+async def modify_user(username: str, new_username: str = Form(...), new_password: str = Form(...), new_supervisor: bool = Form(False), current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
     user = db.query(DBUser).filter(DBUser.username == username).first()
     if user:
-        user.username = new_user.username
-        user.hashed_password = pwd_context.hash(new_user.password)
-        user.supervisor = new_user.supervisor  # измените это поле
+        user.username = new_username
+        user.hashed_password = pwd_context.hash(new_password)
+        user.supervisor = new_supervisor
         db.commit()
         return {"detail": "User modified successfully"}
     else:
         raise HTTPException(status_code=404, detail="User not found")
-
 @app.get("/users", tags=["Пользователи"])
 async def read_users(db: Session = Depends(get_db)):
     users = db.query(DBUser).all()
