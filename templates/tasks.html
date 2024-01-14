@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        form {
+            margin-bottom: 1em;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 1em;
+        }
+        button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome, {{ current_user.username }}!</h1>
+
+    <!-- Форма создания задачи -->
+    <form action="/create_task" method="post">
+        <label for="task_name">Task Name:</label>
+        <input type="text" id="task_name" name="task_name" required>
+
+        <label for="assigned_to">Assigned To:</label>
+        <input type="text" id="assigned_to" name="assigned_to" required>
+
+        <button type="submit">Create Task</button>
+    </form>
+
+    <!-- Ваш список задач -->
+    {% for task in tasks %}
+        <ul>
+            <li>
+                {{ task.name }} - Assigned to: {{ task.assigned_to }} - Status: {{ task.status }}
+                <form action="/complete_task/{{ loop.index }}" method="post">
+                    <button type="submit">Mark as Done</button>
+                </form>
+                <form action="/delete_task/{{ loop.index }}" method="post">
+                    <button type="submit">Delete Task</button>
+                </form>
+                <form action="/modify_task/{{ loop.index }}" method="post">
+                    <label for="new_task_name_{{ loop.index }}">New Task Name:</label>
+                    <input type="text" id="new_task_name_{{ loop.index }}" name="new_task_name" required>
+
+                    <label for="new_assigned_to_{{ loop.index }}">New Assigned To:</label>
+                    <input type="text" id="new_assigned_to_{{ loop.index }}" name="new_assigned_to" required>
+
+                    <button type="submit">Modify Task</button>
+                </form>
+            </li>
+        </ul>
+    {% endfor %}
+
+    <!-- Форма создания пользователя -->
+    <form id="createUserForm">
+        <label for="new_username">Username:</label>
+        <input type="text" id="new_username" name="new_username" required>
+
+        <label for="new_password">Password:</label>
+        <input type="password" id="new_password" name="new_password" required>
+
+        <button type="button" onclick="createUser()">Create User</button>
+    </form>
+
+    <!-- Список пользователей -->
+    {% for user in users %}
+        <ul>
+            <li>
+                {{ user.username }}
+                <form action="/delete_user/{{ loop.index }}" method="post">
+                    <button type="submit">Delete User</button>
+                </form>
+                <form action="/modify_user/{{ loop.index }}" method="post">
+                    <label for="new_username_{{ loop.index }}">New Username:</label>
+                    <input type="text" id="new_username_{{ loop.index }}" name="new_username" required>
+
+                    <label for="new_password_{{ loop.index }}">New Password:</label>
+                    <input type="password" id="new_password_{{ loop.index }}" name="new_password" required>
+
+                    <button type="submit">Modify User</button>
+                </form>
+            </li>
+        </ul>
+    {% endfor %}
+
+    <!-- Форма выхода -->
+    <form action="/logout" method="post">
+        <button type="submit">Logout</button>
+    </form>
+
+    <script>
+        function createUser() {
+            var username = document.getElementById('new_username').value;
+            var password = document.getElementById('new_password').value;
+
+            var data = {
+                "new_username": username,
+                "new_password": password
+            };
+
+            fetch('/create_user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
